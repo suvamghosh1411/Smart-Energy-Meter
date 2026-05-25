@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Live Energy Meter</title>
+  <style>
+    :root,
+    :root[data-theme="dark"] {
+      --bg: #0b1220;
+      --card-from: #0e1722;
+      --card-to: #07101a;
+      --white: #e6eef8;
+      --muted: #9ca3af;
+      --accent-1: #ff80b1;
+      --accent-2: #6b21a8;
+      --track: #e6e7ea33;
+      --header-bg: linear-gradient(90deg, #071028, #0b1724);
+      --header-border: #0f1a28;
+      --card-border: rgba(18, 32, 51, 0.6);
+      --card-shadow: 0 6px 18px rgba(2, 6, 12, 0.55);
+      --card-radius: 12px;
+    }
+
+    :root[data-theme="light"] {
+      --bg: #f4f7fb;
+      --card-from: #ffffff;
+      --card-to: #f9fbff;
+      --white: #1f2937;
+      --muted: #6b7280;
+      --accent-1: #2563eb;
+      --accent-2: #1e40af;
+      --track: #e5e7eb;
+      --header-bg: #ffffff;
+      --header-border: #e5e7eb;
+      --card-border: #e5e7eb;
+      --card-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+      --card-radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--white);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      padding: 15px 25px;
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--header-border);
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      /* Left, Center, Right layout */
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      min-height: 100px;
+    }
+
+    .header-left {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header-right {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    /* CENTER LOAD CONTROL */
+    .header-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .relay-status-text {
+      font-size: 0.9rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* LARGE TOGGLE SWITCH */
+    .large-switch {
+      display: inline-block;
+      height: 46px;
+      position: relative;
+      width: 90px;
+    }
+
+    .large-switch input {
+      display: none;
+    }
+
+    .large-slider {
+      background-color: var(--track);
+      bottom: 0;
+      cursor: pointer;
+      left: 0;
+      position: absolute;
+      right: 0;
+      top: 0;
+      transition: 0.4s;
+      border: 2px solid var(--muted);
+      border-radius: 46px;
+    }
+
+    .large-slider:before {
+      background-color: var(--white);
+      bottom: 4px;
+      content: "";
+      height: 34px;
+      left: 5px;
+      position: absolute;
+      transition: 0.4s;
+      width: 34px;
+      border-radius: 50%;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    }
+
+    input:checked+.large-slider {
+      background-color: var(--accent-1);
+      border-color: var(--accent-1);
+    }
+
+    input:checked+.large-slider:before {
+      transform: translateX(42px);
+    }
+
+    /* PULSE EFFECT WHEN ON */
+    .pulse-on {
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(255, 128, 177, 0.4);
+      }
+
+      70% {
+        box-shadow: 0 0 0 15px rgba(255, 128, 177, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(255, 128, 177, 0);
+      }
+    }
+
+    /* Standard Switch (Theme) */
+    .theme-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .theme-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .theme-switch {
+      display: inline-block;
+      height: 24px;
+      position: relative;
+      width: 44px;
+    }
+
+    .theme-switch input {
+      display: none;
+    }
+
+    .slider {
+      background-color: var(--track);
+      bottom: 0;
+      cursor: pointer;
+      left: 0;
+      position: absolute;
+      right: 0;
+      top: 0;
+      transition: 0.4s;
+      border: 1px solid var(--muted);
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      background-color: var(--white);
+      bottom: 2px;
+      content: "";
+      height: 18px;
+      left: 3px;
+      position: absolute;
+      transition: 0.4s;
+      width: 18px;
+      border-radius: 50%;
+    }
+
+    input:checked+.slider {
+      background-color: var(--accent-1);
+    }
+
+    input:checked+.slider:before {
+      transform: translateX(20px);
+    }
+
+    .title {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    main {
+      padding: 20px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .ts {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+
+    .grid {
+      display: grid;
+      gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+
+    .gcard {
+      background: linear-gradient(180deg, var(--card-from), var(--card-to));
+      border-radius: var(--card-radius);
+      padding: 18px;
+      border: 1px solid var(--card-border);
+      box-shadow: var(--card-shadow);
+    }
+
+    .gcard.text-card {
+      min-height: 235px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .gtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .gauge-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .gauge-svg {
+      width: 300px;
+      height: 160px;
+    }
+
+    .gauge-num {
+      font-size: 28px;
+      font-weight: 700;
+      fill: var(--white);
+    }
+
+    .gauge-unit {
+      font-size: 12px;
+      fill: var(--muted);
+    }
+
+    .text-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-top: 15px;
+    }
+
+    footer {
+      margin-top: 40px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-align: center;
+      padding: 20px;
+    }
+
+    @media (max-width: 800px) {
+      header {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        height: auto;
+      }
+
+      .header-right {
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="header-left">
+      <div class="title">Smart Energy Meter</div>
+      <div class="subtitle">User ID: AU-2022/26-EE</div>
+    </div>
+
+    <!-- CENTERED LARGE LOAD CONTROL AND PREPAID METER -->
+    <div class="header-center" style="flex-direction: row; gap: 40px;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+        <div class="relay-status-text" id="relay-status">SYNCING...</div>
+        <label class="large-switch">
+          <input type="checkbox" id="relay-toggle">
+          <div class="large-slider" id="relay-slider-ui"></div>
+        </label>
+      </div>
+      <div id="prepaid-wrapper" style="display: flex; flex-direction: column; align-items: center; gap: 8px; position: relative; cursor: pointer;">
+        <div class="relay-status-text" id="prepaid-status">PREPAID: OFF</div>
+        <label class="large-switch">
+          <input type="checkbox" id="prepaid-toggle">
+          <div class="large-slider" id="prepaid-slider-ui"></div>
+        </label>
+
+        <div id="prepaid-controls" style="display: none; flex-direction: column; gap: 8px; position: absolute; top: 100%; margin-top: 15px; background: linear-gradient(180deg, var(--card-from), var(--card-to)); border: 1px solid var(--card-border); padding: 15px; border-radius: var(--card-radius); box-shadow: var(--card-shadow); z-index: 200; width: 220px;">
+          <span style="font-size: 12px; color: var(--muted); font-weight: 600;">Set Prepaid Amount (₹)</span>
+          <input type="number" id="prepaid-input" placeholder="e.g. 1000" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--card-border); color: var(--white); padding: 10px; border-radius: 8px; font-family: inherit; font-size: 14px; outline: none; box-sizing: border-box;">
+          <div style="display: flex; gap: 8px; margin-top: 5px;">
+            <button id="btn-apply-prepaid" style="flex: 1; background: rgba(37, 99, 235, 0.1); border: 1px solid var(--accent-1); padding: 8px; border-radius: 6px; color: var(--accent-1); font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.3s ease;">APPLY</button>
+            <button id="btn-reset-prepaid" style="flex: 1; background: rgba(255, 128, 177, 0.1); border: 1px solid var(--accent-1); padding: 8px; border-radius: 6px; color: var(--accent-1); font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.3s ease;">RESET</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="theme-item">
+        <span class="theme-label" id="theme-label">Dark Mode</span>
+        <label class="theme-switch">
+          <input type="checkbox" id="theme-toggle">
+          <div class="slider"></div>
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="ts" id="ts">Initializing data connection...</div>
+    <div class="grid" id="grid"></div>
+
+    <footer>
+      Developed by B.Tech Final Year (Aliah University - 2026)<br>
+      Under the Guidance of Dr. Rumpa Saha (Assistant Professor)
+    </footer>
+  </main>
+
+  <script>
+    // Theme Switch Logic
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeLabel = document.getElementById('theme-label');
+    const currentTheme = localStorage.getItem('theme');
+
+    if (currentTheme) {
+      document.documentElement.setAttribute('data-theme', currentTheme);
+      if (currentTheme === 'light') {
+        themeToggle.checked = true;
+        themeLabel.textContent = 'Light Mode';
+      }
+    }
+
+    themeToggle.addEventListener('change', (e) => {
+      const theme = e.target.checked ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
+      themeLabel.textContent = theme === 'light' ? 'Light Mode' : 'Dark Mode';
+    });
+  </script>
+
+  <script type="module">
+    /* ====== Firebase config ====== */
+    const firebaseConfig = {
+      apiKey: "PUT YOUR BACKEND API KEY",
+      authDomain: "PUT YOUR BACKEND AUTHENTICATION DOMAIN",
+      databaseURL: "PUT YOUR BACKEND DATABAS-URL",
+      projectId: "PUT YOUR PROJECT ID",
+      storageBucket: "PUT YOUR BACKEND STORAGE BUCKET",
+      messagingSenderId: "PUT YOUR BACKEND MESSAGING SENDER ID",
+      appId: "PUT YOUR BACKEND APP-ID"
+    };
+
+    const GAUGE_LIMITS = {
+      Vrms: [0.0, 300.0], Irms: [0.0, 5.0], PF: [0.0, 1.0],
+      P_active: [0.0, 1500.0], S_apparent: [0.0, 1500.0], Q_reactive: [0.0, 1500.0]
+    };
+
+    const GAUGES = [
+      { key: "Vrms", label: "Voltage", unit: "V", type: "gauge" },
+      { key: "Irms", label: "Current", unit: "A", type: "gauge" },
+      { key: "PF", label: "Power Factor", unit: "", type: "gauge" },
+      { key: "P_active", label: "Active Power", unit: "W", type: "gauge" },
+      { key: "S_apparent", label: "Apparent Power", unit: "VA", type: "gauge" },
+      { key: "Q_reactive", label: "Reactive Power", unit: "VAr", type: "gauge" },
+      { key: "total_kWh", label: "Total Energy", unit: "kWh", type: "text" },
+      { key: "cost", label: "Estimated Cost", unit: "₹", type: "text" },
+      { key: "ITHD", label: "Current THD", unit: "%", type: "text" },
+      { key: "voltage_sag_swell", label: "Voltage Sag/Swell", unit: "", type: "text" }
+    ];
+
+    const grid = document.getElementById("grid");
+    GAUGES.forEach(g => {
+      const card = document.createElement("div");
+      card.className = g.type === "text" ? "gcard text-card" : "gcard";
+      const title = `<div class="gtitle">${g.label}</div>`;
+
+      if (g.type === "gauge") {
+        card.innerHTML = `
+          ${title}
+          <div class="gauge-center">
+            <svg class="gauge-svg" viewBox="0 0 320 170" id="svg-${g.key}">
+              <defs>
+                <linearGradient id="grad-${g.key}" x1="0" x2="1">
+                  <stop offset="0%" stop-color="var(--accent-1)"/><stop offset="100%" stop-color="var(--accent-2)"/>
+                </linearGradient>
+              </defs>
+              <path d="M40 130 A120 120 0 0 1 280 130" fill="none" stroke="var(--track)" stroke-width="20" stroke-linecap="round"/>
+              <path id="arc-${g.key}" d="M40 130 A120 120 0 0 1 280 130" fill="none" stroke="url(#grad-${g.key})" stroke-width="20" stroke-linecap="round" stroke-dasharray="0 1000"/>
+              <text id="num-${g.key}" x="160" y="86" class="gauge-num" text-anchor="middle">0</text>
+              <text id="unit-${g.key}" x="160" y="106" class="gauge-unit" text-anchor="middle">${g.unit}</text>
+            </svg>
+          </div>`;
+      } else {
+        const symbol = g.key === "cost" ? "₹ " : "";
+        card.innerHTML = `${title}<div class="text-value" id="val-${g.key}">${symbol}0 ${g.unit}</div>`;
+      }
+      grid.appendChild(card);
+    });
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Centered Relay Control Logic
+    const relayToggle = document.getElementById('relay-toggle');
+    const relayStatus = document.getElementById('relay-status');
+    const relaySlider = document.getElementById('relay-slider-ui');
+
+    relayToggle.addEventListener('change', (e) => {
+      set(ref(db, "control/relay_state"), e.target.checked ? 1 : 0);
+    });
+
+    onValue(ref(db, "control/relay_state"), (snap) => {
+      const state = snap.val();
+      relayToggle.checked = (state === 1);
+      relayStatus.textContent = (state === 1) ? "LOAD IS ON" : "LOAD IS OFF";
+      relayStatus.style.color = (state === 1) ? "var(--accent-1)" : "var(--muted)";
+
+      // Add pulse animation if ON
+      if (state === 1) relaySlider.classList.add('pulse-on');
+      else relaySlider.classList.remove('pulse-on');
+    });
+
+    // Prepaid Meter Logic
+    const prepaidToggle = document.getElementById('prepaid-toggle');
+    const prepaidStatus = document.getElementById('prepaid-status');
+    const prepaidSlider = document.getElementById('prepaid-slider-ui');
+    const prepaidControls = document.getElementById('prepaid-controls');
+    const prepaidInput = document.getElementById('prepaid-input');
+    const btnApplyPrepaid = document.getElementById('btn-apply-prepaid');
+    const btnResetPrepaid = document.getElementById('btn-reset-prepaid');
+    const prepaidWrapper = document.getElementById('prepaid-wrapper');
+
+    prepaidToggle.addEventListener('change', (e) => {
+      const isChecked = e.target.checked;
+      set(ref(db, "control/prepaid_meter"), isChecked ? 1 : 0);
+      prepaidControls.style.display = isChecked ? 'flex' : 'none';
+    });
+
+    onValue(ref(db, "control/prepaid_meter"), (snap) => {
+      const state = snap.val() || 0;
+      prepaidToggle.checked = (state === 1);
+      prepaidStatus.textContent = (state === 1) ? "PREPAID: ON" : "PREPAID: OFF";
+      prepaidStatus.style.color = (state === 1) ? "var(--accent-1)" : "var(--muted)";
+      
+      if (state !== 1) {
+        prepaidControls.style.display = 'none';
+      }
+
+      // Add pulse animation if ON
+      if (state === 1) prepaidSlider.classList.add('pulse-on');
+      else prepaidSlider.classList.remove('pulse-on');
+    });
+
+    // Toggle dropdown when clicking wrapper (for touch support)
+    prepaidWrapper.addEventListener('click', (e) => {
+      if (prepaidToggle.checked) {
+        prepaidControls.style.display = 'flex';
+      }
+    });
+
+    // Show dropdown on hover
+    prepaidWrapper.addEventListener('mouseenter', () => {
+      if (prepaidToggle.checked) {
+        prepaidControls.style.display = 'flex';
+      }
+    });
+
+
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!prepaidWrapper.contains(e.target)) {
+        prepaidControls.style.display = 'none';
+      }
+    });
+
+    if (btnApplyPrepaid) {
+      btnApplyPrepaid.addEventListener('click', () => {
+        const amount = parseFloat(prepaidInput.value);
+        if (!isNaN(amount) && amount > 0) {
+          set(ref(db, 'control/prepaid_budget'), amount);
+          alert('Prepaid amount applied successfully!');
+        } else {
+          alert('Please enter a valid amount.');
+        }
+      });
+    }
+
+    if (btnResetPrepaid) {
+      btnResetPrepaid.addEventListener('click', () => {
+        prepaidInput.value = '';
+        set(ref(db, 'control/prepaid_budget'), 0);
+        alert('Prepaid amount reset.');
+      });
+    }
+
+    // Load initial prepaid budget
+    onValue(ref(db, 'control/prepaid_budget'), (snap) => {
+      const val = snap.val() || 0;
+      if (val > 0) {
+        prepaidInput.value = val;
+      }
+    });
+
+    // Helper functions
+    function normalize(key, v) {
+      const lim = GAUGE_LIMITS[key];
+      if (!lim) return 0;
+      return Math.max(0, Math.min(1, (v - lim[0]) / (lim[1] - lim[0])));
+    }
+
+    function setArc(key, norm) {
+      const arc = document.getElementById("arc-" + key);
+      if (!arc) return;
+      const total = arc.getTotalLength();
+      const draw = Math.max(0, Math.min(1, norm)) * total;
+      arc.style.strokeDasharray = draw + " " + (total - draw);
+    }
+
+    // Monitoring data listener
+    onValue(ref(db, "energy"), (snap) => {
+      const data = snap.val();
+      if (!data) return;
+      document.getElementById("ts").textContent = "Last synchronized update: " + (data.timestamp || "--");
+
+      GAUGES.forEach(g => {
+        const key = g.key;
+        const raw = data[key] !== undefined ? data[key] : 0;
+
+        if (g.type === "gauge") {
+          const numEl = document.getElementById("num-" + key);
+          if (numEl) numEl.textContent = Number(raw).toFixed(2);
+          setArc(key, normalize(key, raw));
+        } else {
+          const valEl = document.getElementById("val-" + key);
+          if (!valEl) return;
+          
+          if (key === "voltage_sag_swell") {
+            const vrms = data["Vrms"] !== undefined ? data["Vrms"] : 0;
+            const standardVoltage = 230.0;
+            const ratio = (standardVoltage - vrms) / standardVoltage;
+            const percentage = Math.abs(ratio) * 100;
+            let status = "Sag";
+            if (ratio < 0) status = "Swell";
+            else if (ratio === 0) status = "Normal";
+            valEl.textContent = `${percentage.toFixed(2)} % (${status})`;
+          } else if (key === "ITHD") {
+            valEl.textContent = Number(raw).toFixed(1) + " %";
+          } else if (key === "cost") {
+            valEl.textContent = "₹ " + Number(raw).toFixed(2);
+          } else {
+            valEl.textContent = Number(raw).toFixed(3) + " " + g.unit;
+          }
+        }
+      });
+    });
+  </script>
+</body>
+
+</html>
