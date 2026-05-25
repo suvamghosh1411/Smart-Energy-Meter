@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Energy Meter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #030305;
+      --neon-cyan: #00f2ff;
+      --neon-pink: #ff007a;
+      --neon-green: #39ff14;
+      --molten-gold: #ffaa00;
+      --glass: rgba(255, 255, 255, 0.03);
+      --border-glass: rgba(255, 255, 255, 0.1);
+      --font-main: 'Inter', sans-serif;
+      --font-data: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: var(--bg);
+      color: #fff;
+      font-family: var(--font-main);
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    /* Molten Background Elements */
+    .ambient-glow {
+      position: fixed;
+      width: 150vw;
+      height: 150vh;
+      background:
+        radial-gradient(circle at 20% 30%, rgba(0, 242, 255, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 80% 70%, rgba(255, 0, 122, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(57, 255, 20, 0.05) 0%, transparent 50%);
+      filter: blur(80px);
+      z-index: -1;
+      animation: flow 20s ease-in-out infinite alternate;
+    }
+
+    @keyframes flow {
+      from {
+        transform: translate(-10%, -10%) rotate(0deg);
+      }
+
+      to {
+        transform: translate(10%, 10%) rotate(10deg);
+      }
+    }
+
+    /* Mobile Container */
+    .app-container {
+      width: 100%;
+      max-width: 430px;
+      padding: 24px;
+      padding-bottom: 120px;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+      animation: fadeInDown 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--glass);
+      border: 1px solid var(--border-glass);
+      padding: 6px 16px 6px 6px;
+      border-radius: 100px;
+      backdrop-filter: blur(10px);
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(45deg, var(--neon-cyan), var(--neon-pink));
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--neon-green);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--neon-green);
+      animation: pulse 2s infinite;
+    }
+
+    /* Molten Meter Hero */
+    .main-meter {
+      position: relative;
+      height: 380px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 40px;
+    }
+
+    .liquid-orb {
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      border-radius: 38% 62% 63% 37% / 41% 44% 56% 59%;
+      background: linear-gradient(135deg, rgba(0, 242, 255, 0.2), rgba(255, 0, 122, 0.2));
+      filter: blur(2px);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      animation: morph 8s ease-in-out infinite alternate;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: inset 0 0 50px rgba(255, 255, 255, 0.05);
+    }
+
+    .liquid-orb::after {
+      content: '';
+      position: absolute;
+      inset: 10px;
+      border-radius: inherit;
+      border: 1px solid rgba(0, 242, 255, 0.3);
+      filter: drop-shadow(0 0 15px var(--neon-cyan));
+    }
+
+    @keyframes morph {
+      0% {
+        border-radius: 38% 62% 63% 37% / 41% 44% 56% 59%;
+        transform: rotate(0deg) scale(1);
+      }
+
+      50% {
+        border-radius: 50% 50% 30% 70% / 50% 30% 70% 50%;
+        transform: rotate(90deg) scale(1.05);
+      }
+
+      100% {
+        border-radius: 70% 30% 50% 50% / 30% 70% 50% 50%;
+        transform: rotate(180deg) scale(1);
+      }
+    }
+
+    .meter-content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+    }
+
+    .current-usage {
+      font-family: var(--font-data);
+      font-size: 64px;
+      font-weight: 700;
+      letter-spacing: -2px;
+      background: linear-gradient(to bottom, #fff, #888);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1;
+    }
+
+    .unit {
+      font-size: 18px;
+      color: var(--neon-cyan);
+      font-family: var(--font-main);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      margin-top: 8px;
+      display: block;
+    }
+
+    .sub-data {
+      margin-top: 24px;
+      font-family: var(--font-data);
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 14px;
+    }
+
+    /* Live Parameters Grid */
+    .param-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .glass-card {
+      background: var(--glass);
+      border: 1px solid var(--border-glass);
+      padding: 20px;
+      border-radius: 32px;
+      backdrop-filter: blur(20px);
+      transition: transform 0.3s ease, background 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .glass-card:active {
+      transform: scale(0.96);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .card-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(255, 255, 255, 0.4);
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .card-value {
+      font-family: var(--font-data);
+      font-size: 24px;
+      font-weight: 600;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .card-unit {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    .neon-line {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 2px;
+      width: 40%;
+      background: var(--neon-cyan);
+      box-shadow: 0 0 10px var(--neon-cyan);
+    }
+
+    .neon-line.pink {
+      background: var(--neon-pink);
+      box-shadow: 0 0 10px var(--neon-pink);
+    }
+
+    .neon-line.green {
+      background: var(--neon-green);
+      box-shadow: 0 0 10px var(--neon-green);
+    }
+
+
+
+    /* Views */
+    .view-content {
+      display: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .view-content.active {
+      display: block;
+      opacity: 1;
+    }
+
+    /* Floating Nav */
+    .nav-bar {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 48px);
+      max-width: 380px;
+      height: 72px;
+      background: rgba(10, 10, 10, 0.7);
+      backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--border-glass);
+      border-radius: 40px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 100;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .nav-item {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: rgba(255, 255, 255, 0.4);
+      transition: all 0.3s ease;
+    }
+
+    .nav-item.active {
+      color: var(--neon-cyan);
+      background: rgba(0, 242, 255, 0.1);
+    }
+
+    /* Animations */
+    @keyframes pulse {
+      0% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+      }
+
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .molten-text {
+      text-shadow: 0 0 20px rgba(0, 242, 255, 0.5);
+    }
+
+    /* Noise Texture Overlay */
+    .noise {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0.04;
+      pointer-events: none;
+      z-index: 1000;
+      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    }
+
+    /* Toggle Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 34px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--glass);
+      border: 1px solid var(--border-glass);
+      transition: .4s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 3px;
+      bottom: 3px;
+      background-color: rgba(255, 255, 255, 0.4);
+      transition: .4s;
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+    input:checked+.slider {
+      background-color: rgba(57, 255, 20, 0.2);
+      border: 1px solid var(--neon-green);
+      box-shadow: 0 0 15px rgba(57, 255, 20, 0.3);
+    }
+
+    input:checked+.slider:before {
+      transform: translateX(26px);
+      background-color: var(--neon-green);
+      box-shadow: 0 0 10px var(--neon-green);
+    }
+
+    /* Scrollbar hide */
+    ::-webkit-scrollbar {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="noise"></div>
+  <div class="ambient-glow"></div>
+
+  <div class="app-container">
+    <header>
+      <div class="user-pill">
+        <div class="avatar"></div>
+        <span style="font-size: 14px; font-weight: 600;">Home Station</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span id="ts" style="font-size: 12px; color: rgba(255,255,255,0.5);">Waiting for data...</span>
+        <div class="status-dot"></div>
+      </div>
+    </header>
+
+    <div class="view-content active" id="view-home">
+      <section class="main-meter">
+        <div class="liquid-orb"></div>
+        <div class="meter-content">
+          <span class="unit">Active Power</span>
+          <div class="current-usage" id="num-P_active">0</div>
+          <span class="unit" style="font-size: 14px; color: #fff; opacity: 0.6;">W</span>
+          <div class="sub-data">
+            <span id="val-total_kWh">0 kWh</span> today
+          </div>
+        </div>
+      </section>
+
+      <!-- Dynamic elements are gone from JS, we place all required UI manually here -->
+      <div id="grid" style="display: none;"></div>
+
+      <div class="param-grid">
+        <div class="glass-card">
+          <span class="card-label">Voltage</span>
+          <div class="card-value"><span id="num-Vrms">0</span><span class="card-unit">V</span></div>
+          <div class="neon-line"></div>
+        </div>
+        <div class="glass-card">
+          <span class="card-label">Current</span>
+          <div class="card-value"><span id="num-Irms">0</span><span class="card-unit">A</span></div>
+          <div class="neon-line pink"></div>
+        </div>
+        <div class="glass-card">
+          <span class="card-label">Power Factor</span>
+          <div class="card-value"><span id="num-PF">0</span><span class="card-unit"></span></div>
+          <div class="neon-line green"></div>
+        </div>
+
+        <div class="glass-card">
+          <span class="card-label">Estimated Cost</span>
+          <div class="card-value" id="val-cost" style="font-size: 24px;">₹ 0</div>
+          <div class="neon-line" style="background: var(--neon-pink); box-shadow: 0 0 10px var(--neon-pink);"></div>
+        </div>
+      </div>
+
+
+
+      <div style="margin-top: 24px; color: rgba(255,255,255,0.4); font-size: 10px; text-align: center;">
+        Developed by B.Tech Final Year (Aliah University - 2026) • Under the Guidance of Dr. Rumpa Saha (Assistant
+        Professor)
+      </div>
+    </div>
+
+    <div class="view-content" id="view-stats">
+      <h2 style="margin-bottom: 24px;">Analytics Overview</h2>
+      <div class="glass-card" style="margin-bottom: 16px;">
+        <span class="card-label">Peak Usage Time</span>
+        <div class="card-value">18:00 - 21:00</div>
+      </div>
+    </div>
+
+    <div class="view-content" id="view-history">
+      <h2 style="margin-bottom: 24px;">Energy Consumption History</h2>
+      <div class="glass-card" style="margin-bottom: 16px;">
+        <span class="card-label">Total Energy (All Time)</span>
+        <div class="card-value" id="history-total-kwh" style="color: var(--neon-cyan);">Loading...</div>
+      </div>
+      <div class="glass-card" style="margin-bottom: 24px;">
+        <span class="card-label">Total Cost (All Time)</span>
+        <div class="card-value" id="history-total-cost" style="color: var(--neon-pink);">Loading...</div>
+      </div>
+
+      <h3 style="margin-bottom: 16px; font-size: 14px; color: rgba(255,255,255,0.6);">Daily Breakdown (Simulated Data)
+      </h3>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <!-- Simulated Daily History Items -->
+        <div class="glass-card"
+          style="padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <span style="font-size: 14px; font-weight: 600;">Today</span>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-family: var(--font-data); font-size: 14px; font-weight: 600;" id="daily-kwh-value">0 kWh
+            </div>
+            <div style="font-size: 11px; color: var(--neon-pink);" id="daily-cost-value">₹ 0</div>
+          </div>
+        </div>
+        <div class="glass-card"
+          style="padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <span style="font-size: 14px; font-weight: 600;">Yesterday</span>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-family: var(--font-data); font-size: 14px; font-weight: 600;">14.2 kWh</div>
+            <div style="font-size: 11px; color: var(--neon-pink);">₹ 113.60</div>
+          </div>
+        </div>
+        <div class="glass-card"
+          style="padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <span style="font-size: 14px; font-weight: 600;">Tuesday</span>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-family: var(--font-data); font-size: 14px; font-weight: 600;">11.8 kWh</div>
+            <div style="font-size: 11px; color: var(--neon-pink);">₹ 94.40</div>
+          </div>
+        </div>
+        <div class="glass-card"
+          style="padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <span style="font-size: 14px; font-weight: 600;">Monday</span>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-family: var(--font-data); font-size: 14px; font-weight: 600;">15.5 kWh</div>
+            <div style="font-size: 11px; color: var(--neon-pink);">₹ 124.00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="view-content" id="view-profile">
+      <div
+        style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 40px;">
+        <img
+          src="https://ui-avatars.com/api/?name=AliahUser+University&background=0D8ABC&color=fff&size=128&rounded=true"
+          alt="Profile Image"
+          style="width: 120px; height: 120px; border-radius: 50%; border: 2px solid var(--neon-cyan); box-shadow: 0 0 20px rgba(0, 242, 255, 0.4); margin-bottom: 24px;">
+        <h2 style="font-size: 24px; margin-bottom: 8px;">Energy Meter Owner</h2>
+        <div style="color: rgba(255,255,255,0.5); font-size: 14px; margin-bottom: 32px;">User Id: AU-2022/26-EE</div>
+
+        <div style="width: 100%; max-width: 300px; display: flex; flex-direction: column; gap: 16px;">
+          <button id="btn-account-settings"
+            style="background: var(--glass); border: 1px solid var(--border-glass); padding: 16px; border-radius: 16px; color: #fff; font-family: var(--font-main); font-size: 16px; backdrop-filter: blur(10px); cursor: pointer;">Account
+            Settings</button>
+          <button id="btn-device-config"
+            style="background: var(--glass); border: 1px solid var(--border-glass); padding: 16px; border-radius: 16px; color: #fff; font-family: var(--font-main); font-size: 16px; backdrop-filter: blur(10px); cursor: pointer;">Device
+            Configuration</button>
+          <button
+            style="background: rgba(255, 0, 122, 0.1); border: 1px solid rgba(255, 0, 122, 0.3); padding: 16px; border-radius: 16px; color: var(--neon-pink); font-family: var(--font-main); font-size: 16px; backdrop-filter: blur(10px); cursor: pointer;">Logout</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Device Configuration View -->
+    <div class="view-content" id="view-config">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+        <h2 style="font-size: 24px;">Device Config</h2>
+        <button id="btn-close-config"
+          style="background: none; border: none; color: rgba(255,255,255,0.6); cursor: pointer; padding: 8px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="glass-card"
+        style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <span class="card-label">Main Relay Control</span>
+          <div style="font-size: 16px; margin-top: 4px;">Toggle Loads <span id="relay-status-text"
+              style="color: var(--neon-green); font-weight: 600; margin-left: 8px;">ON</span></div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="relay-toggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="glass-card"
+        style="margin-bottom: 16px; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <span class="card-label">Energy Saving Mode</span>
+            <div style="font-size: 16px; margin-top: 4px;">Auto Cutoff <span id="energy-saving-status"
+                style="color: var(--neon-pink); font-weight: 600; margin-left: 8px;">OFF</span></div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="energy-saving-toggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+        
+        <div id="energy-saving-controls" style="display: none; margin-top: 16px; flex-direction: column; gap: 12px;">
+          <div>
+            <span style="font-size: 12px; color: rgba(255,255,255,0.6);">Set Monthly Budget (₹)</span>
+            <input type="number" id="budget-input" placeholder="e.g. 500" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); color: #fff; padding: 12px; border-radius: 8px; margin-top: 8px; font-family: var(--font-main); font-size: 16px; outline: none; box-sizing: border-box;">
+          </div>
+          <div style="display: flex; gap: 12px;">
+            <button id="btn-apply-budget" style="flex: 1; background: rgba(57, 255, 20, 0.1); border: 1px solid rgba(57, 255, 20, 0.3); padding: 12px; border-radius: 8px; color: var(--neon-green); font-family: var(--font-main); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">APPLY</button>
+            <button id="btn-reset-budget" style="flex: 1; background: rgba(255, 0, 122, 0.1); border: 1px solid rgba(255, 0, 122, 0.3); padding: 12px; border-radius: 8px; color: var(--neon-pink); font-family: var(--font-main); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">RESET</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card" style="margin-bottom: 16px;">
+        <span class="card-label">Device Status</span>
+        <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+          <div class="status-dot" id="device-status-dot" style="position: static; animation: none;"></div>
+          <span id="device-status-text" style="font-size: 14px;">Online</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Account Settings View -->
+    <div class="view-content" id="view-account-settings">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+        <h2 style="font-size: 24px;">Account Settings</h2>
+        <button id="btn-close-account"
+          style="background: none; border: none; color: rgba(255,255,255,0.6); cursor: pointer; padding: 8px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="glass-card" style="padding: 16px; display: flex; flex-direction: column; cursor: pointer;"
+          onclick="const d = this.querySelector('.details'); d.style.display = d.style.display === 'block' ? 'none' : 'block';">
+          <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <span style="font-size: 16px;">Contact Customer Care</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
+          <div class="details"
+            style="display: none; margin-top: 16px; font-size: 13px; color: var(--neon-cyan); line-height: 1.5;">
+            TOLL FREE NUMBER 12345
+          </div>
+        </div>
+
+        <div class="glass-card" style="padding: 16px; display: flex; flex-direction: column; cursor: pointer;"
+          onclick="const d = this.querySelector('.details'); d.style.display = d.style.display === 'block' ? 'none' : 'block';">
+          <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <span style="font-size: 16px;">Report Theft</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
+          <div class="details"
+            style="display: none; margin-top: 16px; font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.5;">
+            <span style="color: var(--neon-cyan);">TOLL FREE NUMBER 12345</span><br><br>CONTACT YOUR NEAREST
+            DISTRIBUTOR.<br>ADDRESS - IIA/27, Action Area IIA, New Town, Kolkata - 700160, West Bengal, India
+          </div>
+        </div>
+
+        <div class="glass-card" style="padding: 16px; display: flex; flex-direction: column; cursor: pointer;"
+          onclick="const d = this.querySelector('.details'); d.style.display = d.style.display === 'block' ? 'none' : 'block';">
+          <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <span style="font-size: 16px;">Increase Load</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
+          <div class="details"
+            style="display: none; margin-top: 16px; font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.5;">
+            CONTACT YOUR NEAREST DISTRIBUTOR.<br>ADDRESS - IIA/27, Action Area IIA, New Town, Kolkata - 700160, West
+            Bengal, India
+          </div>
+        </div>
+
+        <div class="glass-card" style="padding: 16px; display: flex; flex-direction: column; cursor: pointer;"
+          onclick="const d = this.querySelector('.details'); d.style.display = d.style.display === 'block' ? 'none' : 'block';">
+          <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <span style="font-size: 16px;">Convert to Prepaid meter</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
+          <div class="details"
+            style="display: none; margin-top: 16px; font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.5;">
+            CONTACT YOUR NEAREST DISTRIBUTOR.<br>ADDRESS - IIA/27, Action Area IIA, New Town, Kolkata - 700160, West
+            Bengal, India
+          </div>
+        </div>
+
+        <div class="glass-card" style="padding: 16px; display: flex; flex-direction: column; cursor: pointer;"
+          onclick="const d = this.querySelector('.details'); d.style.display = d.style.display === 'block' ? 'none' : 'block';">
+          <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <span style="font-size: 16px;">Update KYC</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
+          <div class="details"
+            style="display: none; margin-top: 16px; font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.5;">
+            CONTACT YOUR NEAREST DISTRIBUTOR.<br>ADDRESS - IIA/27, Action Area IIA, New Town, Kolkata - 700160, West
+            Bengal, India
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keep floating nav for aesthetics as requested -->
+  <nav class="nav-bar">
+    <div class="nav-item active" data-target="view-home">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7"></rect>
+        <rect x="14" y="3" width="7" height="7"></rect>
+        <rect x="14" y="14" width="7" height="7"></rect>
+        <rect x="3" y="14" width="7" height="7"></rect>
+      </svg>
+    </div>
+    <div class="nav-item" data-target="view-stats">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 20V10"></path>
+        <path d="M18 20V4"></path>
+        <path d="M6 20v-4"></path>
+      </svg>
+    </div>
+    <div class="nav-item" data-target="view-history">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2v10l4.5 4.5"></path>
+        <circle cx="12" cy="12" r="10"></circle>
+      </svg>
+    </div>
+    <div class="nav-item" data-target="view-profile">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+    </div>
+  </nav>
+
+  <script type="module">
+    /* ====== Firebase config (replace if needed) ====== */
+    const firebaseConfig = {
+      apiKey: "PUT YOUR BACKEND API KEY",
+      authDomain: "PUT YOUR BACKEND AUTHENTICATION DOMAIN",
+      databaseURL: "PUT YOUR BACKEND DATABAS-URL",
+      projectId: "PUT YOUR PROJECT ID",
+      storageBucket: "PUT YOUR BACKEND STORAGE BUCKET",
+      messagingSenderId: "PUT YOUR BACKEND MESSAGING SENDER ID",
+      appId: "PUT YOUR BACKEND APP-ID"
+    };
+    /* ================================================= */
+
+    /* GAUGE limits for mapping only (not shown on UI) */
+    const GAUGE_LIMITS = {
+      Vrms: [0.0, 300.0],
+      Irms: [0.0, 5.0],
+      PF: [0.0, 1.0],
+      P_active: [0.0, 1500.0]
+    };
+
+    const GAUGES = [
+      { key: "Vrms", label: "Voltage", unit: "V", type: "gauge" },
+      { key: "Irms", label: "Current", unit: "A", type: "gauge" },
+      { key: "PF", label: "Power Factor", unit: "", type: "gauge" },
+      { key: "P_active", label: "Active Power", unit: "W", type: "gauge" },
+
+      { key: "total_kWh", label: "Total Energy", unit: "kWh", type: "text" },
+      { key: "cost", label: "Estimated Cost", unit: "₹", type: "text" }
+    ];
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    function formatValue(v) {
+      if (v === null || v === undefined) return "0";
+      if (Math.abs(v) < 1 && v !== 0) return Number(v).toFixed(3);
+      return Number(v).toFixed(2);
+    }
+
+    onValue(ref(db, "energy"), (snap) => {
+      const data = snap.val();
+      if (!data) return;
+      const ts = document.getElementById("ts");
+      if (ts) ts.textContent = "Live: " + (data.timestamp || "--");
+
+      GAUGES.forEach(g => {
+        const key = g.key;
+        const raw = data[key] !== undefined ? data[key] : 0;
+        const formatted = formatValue(raw);
+
+        if (g.type === "gauge") {
+          const numEl = document.getElementById("num-" + key);
+          if (numEl) numEl.textContent = formatted;
+        } else {
+          const valEl = document.getElementById("val-" + key);
+          if (!valEl) return;
+
+          if (key === "load") {
+            valEl.textContent = raw || "UNKNOWN";
+            return;
+          }
+
+          if (key === "cost") {
+            const costStr = g.unit + " " + Number(raw).toFixed(2);
+            valEl.textContent = costStr;
+
+            // Update history cost
+            const historyTotalCost = document.getElementById("history-total-cost");
+            if (historyTotalCost) historyTotalCost.textContent = costStr;
+
+            const dailyCostValue = document.getElementById("daily-cost-value");
+            if (dailyCostValue) dailyCostValue.textContent = costStr;
+
+            return;
+          }
+
+          const formattedValueStr = Number(raw).toFixed(3) + " " + g.unit;
+          valEl.textContent = formattedValueStr;
+
+          // Update history total kWh
+          if (key === "total_kWh") {
+            const historyTotalKwh = document.getElementById("history-total-kwh");
+            if (historyTotalKwh) historyTotalKwh.textContent = formattedValueStr;
+
+            const dailyKwhValue = document.getElementById("daily-kwh-value");
+            if (dailyKwhValue) dailyKwhValue.textContent = formattedValueStr;
+          }
+        }
+      });
+    });
+
+
+    // Subtle parallax on mouse/tilt for that "molten" feel
+    document.addEventListener('mousemove', (e) => {
+      const moveX = (e.clientX - window.innerWidth / 2) * 0.01;
+      const moveY = (e.clientY - window.innerHeight / 2) * 0.01;
+      const orb = document.querySelector('.liquid-orb');
+      if (orb) orb.style.transform = `translate(${moveX}px, ${moveY}px) rotate(${moveX}deg)`;
+    });
+
+    // Tab Switching Logic
+    const navItems = document.querySelectorAll('.nav-item');
+    const views = document.querySelectorAll('.view-content');
+
+    navItems.forEach(item => {
+      item.addEventListener('click', () => {
+        // Remove active class from all nav items
+        navItems.forEach(nav => nav.classList.remove('active'));
+        // Add active class to clicked nav item
+        item.classList.add('active');
+
+        // Hide all views
+        views.forEach(view => view.classList.remove('active'));
+
+        // Show target view
+        const targetId = item.getAttribute('data-target');
+        if (targetId) {
+          const targetView = document.getElementById(targetId);
+          if (targetView) targetView.classList.add('active');
+        }
+      });
+    });
+
+    // Device Config Navigation
+    const btnDeviceConfig = document.getElementById('btn-device-config');
+    const btnCloseConfig = document.getElementById('btn-close-config');
+
+    if (btnDeviceConfig) {
+      btnDeviceConfig.addEventListener('click', () => {
+        views.forEach(view => view.classList.remove('active'));
+        document.getElementById('view-config').classList.add('active');
+        // De-select nav icons when deep inside a menu
+        navItems.forEach(nav => nav.classList.remove('active'));
+      });
+    }
+
+    if (btnCloseConfig) {
+      btnCloseConfig.addEventListener('click', () => {
+        views.forEach(view => view.classList.remove('active'));
+        document.getElementById('view-profile').classList.add('active');
+        // Re-select profile nav icon programmatically
+        navItems[3].classList.add('active');
+      });
+    }
+
+    // Account Settings Navigation
+    const btnAccountSettings = document.getElementById('btn-account-settings');
+    const btnCloseAccount = document.getElementById('btn-close-account');
+
+    if (btnAccountSettings) {
+      btnAccountSettings.addEventListener('click', () => {
+        views.forEach(view => view.classList.remove('active'));
+        document.getElementById('view-account-settings').classList.add('active');
+        // De-select nav icons when deep inside a menu
+        navItems.forEach(nav => nav.classList.remove('active'));
+      });
+    }
+
+    if (btnCloseAccount) {
+      btnCloseAccount.addEventListener('click', () => {
+        views.forEach(view => view.classList.remove('active'));
+        document.getElementById('view-profile').classList.add('active');
+        // Re-select profile nav icon programmatically
+        navItems[3].classList.add('active');
+      });
+    }
+
+    // Energy Saving Mode Logic
+    const energySavingToggle = document.getElementById('energy-saving-toggle');
+    const energySavingStatus = document.getElementById('energy-saving-status');
+    const energySavingControls = document.getElementById('energy-saving-controls');
+    const budgetInput = document.getElementById('budget-input');
+    const btnApplyBudget = document.getElementById('btn-apply-budget');
+    const btnResetBudget = document.getElementById('btn-reset-budget');
+
+    if (energySavingToggle) {
+      energySavingToggle.addEventListener('change', (e) => {
+        const isChecked = e.target.checked;
+        set(ref(db, 'control/energy_saving_mode'), isChecked ? 1 : 0);
+        energySavingControls.style.display = isChecked ? 'flex' : 'none';
+      });
+
+      onValue(ref(db, 'control/energy_saving_mode'), (snap) => {
+        const val = snap.val() || 0;
+        const isChecked = (val === 1);
+        energySavingToggle.checked = isChecked;
+        energySavingControls.style.display = isChecked ? 'flex' : 'none';
+
+        if (isChecked) {
+          energySavingStatus.textContent = 'ON';
+          energySavingStatus.style.color = 'var(--neon-green)';
+        } else {
+          energySavingStatus.textContent = 'OFF';
+          energySavingStatus.style.color = 'var(--neon-pink)';
+        }
+      });
+    }
+
+    if (btnApplyBudget) {
+      btnApplyBudget.addEventListener('click', () => {
+        const amount = parseFloat(budgetInput.value);
+        if (!isNaN(amount) && amount > 0) {
+          set(ref(db, 'control/budget_limit'), amount);
+          alert('Budget applied successfully!');
+        } else {
+          alert('Please enter a valid amount.');
+        }
+      });
+    }
+
+    if (btnResetBudget) {
+      btnResetBudget.addEventListener('click', () => {
+        budgetInput.value = '';
+        set(ref(db, 'control/budget_limit'), 0);
+        alert('Budget limit reset.');
+      });
+    }
+
+    // Load initial budget limit
+    onValue(ref(db, 'control/budget_limit'), (snap) => {
+      const val = snap.val() || 0;
+      if (val > 0) {
+        budgetInput.value = val;
+      }
+    });
+
+    // Toggle Switch Logic
+    const relayToggle = document.getElementById('relay-toggle');
+    const relayStatusText = document.getElementById('relay-status-text');
+    const deviceStatusDot = document.getElementById('device-status-dot');
+    const deviceStatusText = document.getElementById('device-status-text');
+
+    if (relayToggle) {
+      relayToggle.addEventListener('change', (e) => {
+        set(ref(db, 'control/relay_2_state'), e.target.checked ? 1 : 0);
+      });
+
+      onValue(ref(db, 'control/relay_2_state'), (snap) => {
+        const val = snap.val() || 0;
+        relayToggle.checked = (val === 1);
+
+        if (val === 1) {
+          relayStatusText.textContent = 'ON';
+          relayStatusText.style.color = 'var(--neon-green)';
+
+          if (deviceStatusDot) {
+            deviceStatusDot.style.background = 'var(--neon-green)';
+            deviceStatusDot.style.boxShadow = '0 0 10px var(--neon-green)';
+          }
+          if (deviceStatusText) {
+            deviceStatusText.textContent = 'Online';
+          }
+        } else {
+          relayStatusText.textContent = 'OFF';
+          relayStatusText.style.color = 'var(--neon-pink)';
+
+          if (deviceStatusDot) {
+            deviceStatusDot.style.background = 'var(--neon-pink)';
+            deviceStatusDot.style.boxShadow = '0 0 10px var(--neon-pink)';
+          }
+          if (deviceStatusText) {
+            deviceStatusText.textContent = 'Offline';
+          }
+        }
+      });
+    }
+  </script>
+</body>
+
+</html>
